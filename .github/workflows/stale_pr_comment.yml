@@ -1,4 +1,4 @@
-name: Stale PR Comment
+name: Stale PR Comment v2
 
 on:
   schedule:
