@@ -3,8 +3,25 @@ name: PR Comment
 on:
   pull_request:
     types: [opened, reopened, synchronize]
+  schedule:
+    - cron: '0 0 * * 0' 
 
 jobs:
+  first-comment:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.action == 'opened' }}
+    steps:
+      - name: Add first comment
+        if: github.event.action == 'opened'
+        run: |
+          COMMENT="Thank you for creating this pull request! Please make sure to include relevant details and follow our contribution guidelines. For more information, check out our CONTRIBUTING.md."
+          echo "$COMMENT"
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -d "{\"body\": \"$COMMENT\"}" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments"
+
   stale-comment:
     runs-on: ubuntu-latest
     steps:
