@@ -1,6 +1,8 @@
 name: Stale PR Comment
 
 on:
+  pull_request:
+    types: [opened, reopened, synchronize]
   schedule:
     - cron: '*/2 * * * *' # Runs every 2 minutes for testing purposes
 
@@ -12,32 +14,28 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v2
 
-      - name: Get Open PRs
-        id: get-prs
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          response=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
-            -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/${{ github.repository }}/pulls?state=open")
-          echo "$response" | jq -c '.[] | {number: .number, updated_at: .updated_at}' > prs.json
-          echo "::set-output name=prs::$(cat prs.json)"
-
       - name: Check for stale PRs
-        id: check-stale
+        id: stale-prs
         run: |
-          stale_prs=$(jq -r '.[] | select((now - (.updated_at | fromdateiso8601)) > (7 * 24 * 60 * 60)) | .number' prs.json)
-          echo "::set-output name=stale_prs::$stale_prs"
-
+          last_updated=$(date -d "$(jq -r '.pull_request.updated_at' $GITHUB_EVENT_PATH)" +%s)
+          now=$(date +%s)
+          days_since_update=$(( (now - last_updated) / 86400 ))
+          echo "Days since last update: $days_since_update"
+          if [ $days_since_update -ge 7 ]; then
+            echo "::set-output name=stale_pr_number::${{ github.event.pull_request.number }}"
+          else
+            echo "::set-output name=stale_pr_number::"
+          fi
       - name: Add stale comment
-        if: ${{ steps.check-stale.outputs.stale_prs != '' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: ${{ steps.stale-prs.outputs.stale_pr_number != '' }}
         run: |
-          for pr in ${{ steps.check-stale.outputs.stale_prs }}; do
-            COMMENT="It seems there has been no activity on this PR for more than a week. Please review or provide updates."
-            curl -s -X POST -H "Authorization: token $GITHUB_TOKEN" \
-              -H "Accept: application/vnd.github.v3+json" \
-              -d "{\"body\": \"$COMMENT\"}" \
-              "https://api.github.com/repos/${{ github.repository }}/issues/$pr/comments"
-          done
+          COMMENT="It seems there has been no activity on this PR for more than a week. Please review or provide updates."
+          echo "$COMMENT"
+          # Posting comment via GitHub API
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            -d "{\"body\": \"$COMMENT\"}" \
+            "https://api.github.com/repos/${{ github.repository }}/issues/${{ steps.stale-prs.outputs.stale_pr_number }}/comments"
+
+          
