@@ -1,5 +1,4 @@
-name: Stale PR Comment 
-# v1
+name: Stale PR Comment
 
 on:
   schedule:
