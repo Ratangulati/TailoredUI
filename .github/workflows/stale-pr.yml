@@ -1,61 +1,35 @@
-name: Comment on Stale PRs
-
+name: Close Stale PRs
 
 on:
   schedule:
-    - cron: '*/1 * * * *'  # Runs daily at midnight UTC
+    - cron: '0 0 * * *'  # Runs daily at midnight UTC
   pull_request:
     types: 
-      - opened
-      - reopened
-      - synchronize
+        - opened
+        - reopened
+        - synchronize
 
 permissions:
-  pull-requests: write
-  issues: write
+    pull-requests: write
+    issues: write        
 
 jobs:
-  comment-stale-prs:
+  close-stale-prs:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
       - name: Close Stale PRs
-        id: find-stale
-        uses: actions/github-script@v6
+        uses: actions/stale@v7
         with:
-          script: |
-            const daysBeforeStale = 7;
-            const msInDay = 24 * 60 * 60 * 1000;
-            const staleDate = new Date(Date.now() - daysBeforeStale * msInDay);
-
-            const { data: pulls } = await github.pulls.list({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              state: 'open',
-            });
-
-            const stalePulls = pulls.filter(pr => {
-              const updatedAt = new Date(pr.updated_at);
-              return updatedAt < staleDate;
-            });
-
-            return stalePulls.map(pr => pr.number);
-
-      - name: Comment on Stale PRs
-        if: steps.find-stale.outputs.length > 0
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const prNumbers = ${{ steps.find-stale.outputs }};
-            const commentBody = 'It seems there has been no activity on this PR for more than a week. Please review or provide updates.';
-
-            for (const prNumber of prNumbers) {
-              await github.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: prNumber,
-                body: commentBody,
-              });
-            }
+            repo-token: ${{ secrets.GITHUB_TOKEN }}
+            stale-pr-message: 'This PR has been automatically closed due to inactivity from the owner for 7 days.'
+            days-before-pr-stale: 7
+            days-before-pr-close: 0
+            exempt-pr-author: false
+            exempt-pr-labels: ''
+            only-labels: ''
+            operations-per-run: 30
+            remove-stale-when-updated: true
+            debug-only: false
