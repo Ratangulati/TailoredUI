@@ -1,8 +1,8 @@
-name: Stale PR Comment v4
+name: Stale PR Comment
 
 on:
   schedule:
-    - cron: '*/1 * * * *' # Runs every 2 minutes for testing purposes
+    - cron: '*/1 * * * *' # Runs every minute for testing purposes
 
 jobs:
   stale-pr-check:
