@@ -10,7 +10,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3 # Updated to use Node.js 20
+        uses: actions/checkout@v2 # Updated to use Node.js 20
 
       - name: Fetch Open PRs
         run: |
